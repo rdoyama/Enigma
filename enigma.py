@@ -6,92 +6,16 @@
 ##	up to four rotors and the ring configuration.
 ##
 
+from utils import ALPHABET, L2POS, POS2L
+from utils import ROTORS, REFLECTORS, TURNS
 
-ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-L2POS = {letter: i for i, letter in enumerate(ALPHABET)}
-POS2L = {i: letter for i, letter in enumerate(ALPHABET)}
-
-# Rotors and reflectors used by the German Navy
-ROTORS = {
-	"I":    "EKMFLGDQVZNTOWYHXUSPAIBRCJ",
-	"II":   "AJDKSIRUXBLHWTMCQGZNPYFVOE",
-	"III":  "BDFHJLCPRTXVZNYEIWGAKMUSQO",
-	"IV":   "ESOVPZJAYQUIRHXLNFTGKDCMWB",
-	"V":    "VZBRGITYUPSDNHLXAWMJQOFECK",
-	"VI":   "JPGVOUMFYQBENHZRDKASXLICTW",
-	"VII":  "NZJHGRCXMYSWBOUFAIVLPEKQDT",
-	"VIII": "FKQHTLXOCBJSPDZRAMEWNIUYGV"
-}
-
-
-def rotor2dict(rotor_string):
-	"""
-	Converts a rotor string to a dictionary, where each key
-	is mapped to the corresponding letter.
-	"""
-	mapped = {'left':{}, 'right':{}}
-	if len(rotor_string) != 26 or not rotor_string.isalpha():
-		raise ValueError(f"Bad rotor string: {rotor_string}")
-
-	for n, letter in enumerate(ALPHABET):
-		mapped[letter] = rotor_string[n]
-
-	return mapped 
-
-
-def map_plugboard(plugboard):
-	"""
-	Returns a dictionary that maps a given letter into another given the
-	plugboard. Checks for errors and missing letters are also handled.
-	"""
-	mapped = {}
-	pairs = plugboard.strip().upper().split(" ")
-	joined = "".join(pairs)
-
-	if len(joined) > 20:
-		raise Exception("Too many pairs in the plugboard!")
-
-	if len(set(joined)) != len(joined):
-		raise Exception("Plugboard has letters mapped twice or more")
-
-	for p in pairs:
-		if len(p) != 2 or not p.isalpha():
-			raise ValueError(f"Bad input pairs format: {p}")
-		a, b = p
-		mapped[L2POS[a]] = L2POS[b]
-		mapped[L2POS[b]] = L2POS[a]
-
-	remaining = list(set(ALPHABET) - set(joined))
-
-	for letter in remaining:
-		mapped[L2POS[letter]] = L2POS[letter]
-
-	return mapped
-
-
-def check_enigma_inputs(rotors, offsets):
-	"""
-	Checks if rotors and offsets provided are valid inputs
-	"""
-	size_rot = len(rotors)
-	size_off = len(offsets)
-	valid = [3, 4]
-
-	if size_rot != size_off or size_rot not in valid or size_off not in valid:
-		raise Exception("Rotors/Offsets have the wrong sizes")
-
-	for rot in rotors:
-		if not rot.isalpha() or rot.upper() not in ROTORS.keys():
-			raise ValueError(f"{rot} is not a valid rotor!")
-
-	for off, ring in zip(offsets, rings):
-		if not isinstance(off, str) or not "A" <= off <= "Z":
-			raise Exception(f"{off} is not a valid offset")
-		if not isinstance(ring, str) or not "A" <= ring <= "Z":
-			raise Exception(f"{ring} is not a valid offset")
-
-	return
+from utils import map_plugboard
+from utils import check_enigma_inputs
+from utils import get_rotors
+from utils import get_reflector
+from utils import print_output
+from utils import message2num
+from utils import num2message
 
 
 class Enigma(object):
@@ -103,34 +27,51 @@ class Enigma(object):
 
 	ARGUMENTS:
 	  --> Plugboard: up to 10 groups mapping one letter into another (e.g.
-					"ab df gh re ok")
+					"ab df gh re ok"). Defaults to no plugboard (= None)
 	  --> Rotors: List of roman numerals (strings) representing the rotors ("I",
 					"II", ..., "VIII"). Supports three or more rotors up to 4.
 					The first element of this list corresponds to the left
-					rotor and so on.
-	  --> Offsets: List of strings. Must have the same size than 'Rotors' and
+					rotor and so on. Defaults to ["I", "II", "III"]
+	  --> Reflector: Reflector name as a String. Supports "A", "B" and "C".
+	  				Defaults to "B"
+ 	  --> Offsets: String. Must have the same size than 'Rotors' and
 					each component ranges between A and Z. Adds a initial offset
-					on each rotor.
-	  --> Rings: List of strings, similar to the Offsets. This option changes
+					on each rotor. Default is "AAA"
+	  --> Rings: String, similar to the Offsets. This option changes
 	  				how wires are connected, not changing the order of the
 	  				letters that appear at the top of the machine (offsets).
+	  				Defaults to "AAA"
 	"""
-	def __init__(self, plugboard: str, rotors: list, offsets: list, rings: list):
-		check_enigma_inputs(rotors, offsets, rings)
+	def __init__(self, plugboard: str=None, rotors: list=["I", "II", "III"],
+						reflector: str="B", offsets: list="AAA",
+						rings: list="AAA"):
+		check_enigma_inputs(rotors, reflector, offsets, rings)
 		self.plugboard = map_plugboard(plugboard)
+		self.rotors    = get_rotors(rotors)
+		self.reflector = get_reflector(reflector)
+		self.offsets   = [L2POS[letter] for letter in offsets]
+		self.rings     = [L2POS[letter] for letter in rings]
 
-	@staticmethod
-	def _message2num(message):
-		to_list = list(filter(lambda x: x.isalpha(), message.strip().upper()))
+		self.n_rotors  = len(rotors)
+		self.refl_name = reflector
+		self.rotors_n  = [r.strip().upper() for r in rotors]
 
-		# Convert to numbers - A:0, B:1, ..., Z:25
-		to_list = [L2POS[i] for i in to_list]
+		self.start_off = self.offsets.copy()
 
-		return to_list
+	def __str__(self):
+		name = "Enigma M3\n\n"
+		rots = f"Rotors (left -> right): {', '.join(self.rotors_n)}\n"
+		refl = f"Reflector: {self.refl_name}\n"
+		offs = f"Initial Rotor Settings: {''.join([POS2L[i] for i in self.offsets])}\n"
+		ring = f"Ring Configuration: {''.join([POS2L[i] for i in self.rings])}\n"
+		return name + rots + refl + offs + ring
 
-	@staticmethod
-	def _num2message(numbers):
-		return "".join([POS2L[i] for i in numbers])
+	def reset(self):
+		"""
+		Resets the machine to the starting configuration, so it can be
+		used to decrypt the messages
+		"""
+		self.offsets = self.start_off.copy()
 
 	def _enc_plugboard(self, message_num):
 		"""
@@ -139,26 +80,129 @@ class Enigma(object):
 		"""
 		return [self.plugboard[l] for l in message_num]
 
-	def _rotor_right2left(self, rotor, offset, input_letter):
+	def _turn_rotors(self):
+		turn_next = True
+		for i in range(-1, -self.n_rotors - 1, -1):
+			if turn_next:
+				if POS2L[self.offsets[i]] not in TURNS[self.rotors_n[i]]:
+					self.offsets[i] = (self.offsets[i] + 1) % len(ALPHABET)
+					break
+				self.offsets[i] = (self.offsets[i] + 1) % len(ALPHABET)
+
+	@staticmethod
+	def _rotor_right2left(rotor, input_letter, offset, ring):
 		"""
 		Applies a substituition cypher done by the rotor from right to left
 
 		input_letter -> integer that represents the letter
-		rotor -> rotor string
+		rotor -> rotor as a list of integers
 		offset -> integer representing the offset (A:0, B:1, ...)
+		ring -> ring integer
 		"""
+		alpha_size = len(ALPHABET)
+		return (rotor[(input_letter + offset - ring) % alpha_size] - offset +\
+					ring) % alpha_size
 
+	@staticmethod
+	def _reflect(reflector, input_letter):
+		"""
+		Given a reflector dictionary and an integer representation of the
+		input letter, returns the reflected letter as an integer
+		"""
+		return reflector[input_letter]
 
-	def test(self):
-		message = "e n i g m_a"
-		processed = self._message2num(message)
-		print(self._num2message(processed))
-		print(processed)
-		plug = self._enc_plugboard(processed)
-		print(self._num2message(plug))
+	@staticmethod
+	def _rotor_left2right(rotor, input_letter, offset, ring):
+		"""
+		Applies a substituition cypher done by the rotor from left to right
+
+		input_letter -> integer that represents the letter
+		rotor -> rotor as a list of integers
+		offset -> integer representing the offset (A:0, B:1, ...)
+		ring -> ring integer
+		"""
+		letter = (input_letter + offset - ring) % len(ALPHABET)
+		return (rotor.index(letter) - offset + ring) % len(ALPHABET)
+
+	def _forward(self, letter):
+		"""
+		Executes a forward pass through all the rotors from right to left
+		Returns the encrypted letter as an integer
+		"""
+		self._turn_rotors()
+		l = letter
+		for i in range(-1, -self.n_rotors - 1, -1):
+			l = self._rotor_right2left(self.rotors[i], l, self.offsets[i],
+									self.rings[i])
+		return l
+
+	def _backwards(self, letter):
+		"""
+		Given the letter returned by the reflector, executes a backward pass,
+		cyphering the input letter in all rotors from left to right
+		Returns the output letter as an integer
+		"""
+		l = letter
+		for i in range(self.n_rotors):
+			l = self._rotor_left2right(self.rotors[i], l, self.offsets[i],
+									self.rings[i])
+		return l
+
+	def encrypt(self, text):
+		"""
+		Pre-process text, executes a forward, reflection and backward pass and
+		outputs the encrypted text as a string of capital letters
+		"""
+		clean_text = message2num(text)
+		encrypted = []
+		plug = self._enc_plugboard(clean_text)
+
+		for letter in plug:
+			l = self._forward(letter)
+			l = self._reflect(self.reflector, l)
+			l = self._backwards(l)
+			encrypted.append(l)
+
+		encrypted = self._enc_plugboard(encrypted)
+		encrypted = "".join(POS2L[l] for l in encrypted)
+
+		return encrypted
+
+	def decrypt(self, text):
+		"""
+		Decrypts text. The configuration should be the same as the initial
+		configuration used by the machine for encryption. Use the reset
+		method to reset the offsets if necessary.
+		"""
+		if self.offsets != self.start_off:
+			raise Exception("Current offset != starting offset. Use the reset"+\
+							" method before decrypting.")
+		return self.encrypt(text)
 
 
 if __name__ == "__main__":
-	enigma = Enigma("ab cd ef gh", ["I", "II", "III"], ["A", "A", "A"], ["A", "A", "A"])
-	enigma.test()
+	enigma = Enigma("bq cr di ej kw mt os px uz gh", ["I", "II", "III"], "B", "AAA", "AAB")
+
+	print(enigma)
+
+	txt = "The Enigma machine is a cipher device developed and used in the early- to mid-20th century to protect commercial, diplomatic, and military communication."
+
+	enc = enigma.encrypt(txt)
+
+	print(f"Input text:")
+	print(txt + '\n')
+
+	print(f"Formatted text:")
+	print(num2message(message2num(txt)), '\n')
+
+	print("Encrypted")
+	print_output(enc)
+
+	print()
+
+	print("Resetting\n")
+	enigma.reset()
+
+	print("Decrypted")
+	print_output(enigma.decrypt(enc))
 
