@@ -2,6 +2,8 @@
 ## Useful Functions and variables
 ##
 
+from unidecode import unidecode
+
 
 ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -12,20 +14,24 @@ POS2L = {i: letter for i, letter in enumerate(ALPHABET)}
 # Rotors and reflectors used by the German Navy. Only the most common
 # reflectors are implemented
 ROTORS = {
-	"I":    "EKMFLGDQVZNTOWYHXUSPAIBRCJ",
-	"II":   "AJDKSIRUXBLHWTMCQGZNPYFVOE",
-	"III":  "BDFHJLCPRTXVZNYEIWGAKMUSQO",
-	"IV":   "ESOVPZJAYQUIRHXLNFTGKDCMWB",
-	"V":    "VZBRGITYUPSDNHLXAWMJQOFECK",
-	"VI":   "JPGVOUMFYQBENHZRDKASXLICTW",
-	"VII":  "NZJHGRCXMYSWBOUFAIVLPEKQDT",
-	"VIII": "FKQHTLXOCBJSPDZRAMEWNIUYGV"
+	"I":     "EKMFLGDQVZNTOWYHXUSPAIBRCJ",
+	"II":    "AJDKSIRUXBLHWTMCQGZNPYFVOE",
+	"III":   "BDFHJLCPRTXVZNYEIWGAKMUSQO",
+	"IV":    "ESOVPZJAYQUIRHXLNFTGKDCMWB",
+	"V":     "VZBRGITYUPSDNHLXAWMJQOFECK",
+	"VI":    "JPGVOUMFYQBENHZRDKASXLICTW",
+	"VII":   "NZJHGRCXMYSWBOUFAIVLPEKQDT",
+	"VIII":  "FKQHTLXOCBJSPDZRAMEWNIUYGV",
+	"BETA":  "LEYJVCNIXWPBQMDRTAKZGFUHOS",
+	"GAMMA": "FSOKANUERHMBTIYCWLQPZXVGJD"
 }
 
 REFLECTORS = {
-	"A": "EJMZALYXVBWFCRQUONTSPIKHGD",
-	"B": "YRUHQSLDPXNGOKMIEBFZCWVJAT",
-	"C": "FVPJIAOYEDRZXWGCTKUQSBNMHL",
+	"A":      "EJMZALYXVBWFCRQUONTSPIKHGD",
+	"B":      "YRUHQSLDPXNGOKMIEBFZCWVJAT",
+	"C":      "FVPJIAOYEDRZXWGCTKUQSBNMHL",
+	"B_THIN": "ENKQAUYWJICOPBLMDXZVFTHRGS ",
+	"C_THIN": "RDOBJNTKVEHMLFCWZAXGYIPSUQ"
 }
 
 # Turning points for each rotor. If the rotor steps from any of these
@@ -80,13 +86,23 @@ def check_enigma_inputs(rotors, reflector, offsets, rings):
 	"""
 	size_rot = len(rotors)
 	size_off = len(offsets)
+	size_ring = len(rings)
 	valid = [3, 4]
 
-	if size_rot != size_off or size_rot not in valid or size_off not in valid:
-		raise Exception("Rotors/Offsets have the wrong sizes")
+	if size_rot != size_off or size_off != size_ring\
+						or size_rot not in valid:
+		raise Exception("Rotors/Offsets/Rings have the wrong sizes")
+
+	if size_rot == 4:
+		if rotors[0].strip().upper() not in ["BETA", "GAMMA"]:
+			raise TypeError(f"Enigma M4 requires Beta or Gamma" +\
+							" as its first rotor")
+		if reflector.strip().upper() not in ["B_THIN", "C_THIN"]:
+			raise TypeError(f"Enigma M4 requires B_thin or C_thin" +\
+							" as its reflector") 
 
 	for rot in rotors:
-		if not rot.isalpha() or rot.upper() not in ROTORS.keys():
+		if rot.upper() not in ROTORS.keys():
 			raise ValueError(f"{rot} is not a valid rotor!")
 
 	if reflector.upper() not in REFLECTORS.keys():
@@ -109,7 +125,7 @@ def get_rotors(rotors):
 	"""
 	rts = []
 	for r in rotors:
-		rts.append([L2POS[l] for l in ROTORS[r]])
+		rts.append([L2POS[l] for l in ROTORS[r.strip().upper()]])
 
 	return rts
 
@@ -122,13 +138,18 @@ def get_reflector(reflector):
 	"""
 	mapped = {}
 	for i, letter in enumerate(ALPHABET):
-		mapped[L2POS[letter]] = L2POS[REFLECTORS[reflector][i]]
+		mapped[L2POS[letter]] = L2POS[REFLECTORS[reflector.strip().upper()][i]]
 
 	return mapped
 
 
 def message2num(message):
-	to_list = list(filter(lambda x: x.isalpha(), message.strip().upper()))
+	"""
+	Converts a string into a list of integers. Special characters
+	are ignored and accents removed.
+	"""
+	to_ascii = unidecode(message.strip().upper())
+	to_list = list(filter(lambda x: x.isalpha(), to_ascii))
 
 	# Convert to numbers - A:0, B:1, ..., Z:25
 	to_list = [L2POS[i] for i in to_list]
@@ -136,6 +157,10 @@ def message2num(message):
 	return to_list
 
 def num2message(numbers):
+	"""
+	Converts a list of integers to a string with only
+	capital letters
+	"""
 	return "".join([POS2L[i] for i in numbers])
 
 
