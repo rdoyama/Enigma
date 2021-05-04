@@ -5,6 +5,8 @@
 ##	M4 (1942), both used by the German Navy supporting
 ##	up to four rotors and the ring configuration + plugboard.
 ##
+##	Check the outputs at https://cryptii.com/pipes/enigma-machine
+##
 
 from utils import ALPHABET, L2POS, POS2L
 from utils import ROTORS, REFLECTORS, TURNS
@@ -71,8 +73,11 @@ class Enigma(object):
 		rots = f" - Rotors (left -> right): {', '.join(self.rotors_n)}\n"
 		refl = f" - Reflector: {self.refl_name}\n"
 		offs = f" - Initial Rotor Settings: {''.join([POS2L[i] for i in self.offsets])}\n"
+		plug = [POS2L[h] + POS2L[k] for h, k in self.plugboard.items() if h != k]
+		plug = list(set(["".join(sorted(i)) for i in plug]))
+		plug = f" - Plugboard: {' '.join(plug)}\n"
 		ring = f" - Ring Configuration: {''.join([POS2L[i] for i in self.rings])}\n"
-		return name + rots + refl + offs + ring
+		return name + rots + refl + offs + plug + ring
 
 	def reset(self):
 		"""
@@ -200,11 +205,21 @@ class Enigma(object):
 
 
 if __name__ == "__main__":
-	enigma = Enigma("bq cr di ej kw mt os px uz gh", ["Gamma", "V", "II", "III"], "B_thin", "BBBC", "ACDA")
+	enigma = Enigma(plugboard="bq cr di ej kw mt os px uz gh",
+					rotors=["Gamma", "V", "II", "III"],
+					reflector="B_thin",
+					offsets="GKDT",
+					rings="HAAA")
 
 	print(enigma)
 
-	txt = "By 1930, the Reichswehr had suggested that the Navy adopt their machine, citing the benefits of increased security (with the plugboard) and easier interservice communications.[49] The Reichsmarine eventually agreed and in 1934[50] brought into service the Navy version of the Army Enigma, designated Funkschlüssel ' or M3. While the Army used only three rotors at that time, the Navy specified a choice of three from a possible five"
+	txt = "By 1930, the Reichswehr had suggested that the Navy adopt their"+\
+			" machine, citing the benefits of increased security (with the"+\
+			" plugboard) and easier interservice communications.[49] The"+\
+			" Reichsmarine eventually agreed and in 1934[50] brought into"+\
+			" service the Navy version of the Army Enigma, designated"+\
+			" Funkschlüssel ' or M3. While the Army used only three rotors at"+\
+			" that time, the Navy specified a choice of three from a possible five"
 
 	enc = enigma.encrypt(txt)
 
@@ -223,5 +238,5 @@ if __name__ == "__main__":
 	enigma.reset()
 
 	print("Decrypted")
-	print_output(enigma.decrypt(enc))
+	print_output(enigma.decrypt(enc), 4, 6)
 
