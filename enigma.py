@@ -1,9 +1,9 @@
 ##
-##  Functions for encrypting/decrypting Enigma messages
+##  Class for encrypting/decrypting Enigma messages
 ##  
 ##	This code aims to simulate a Enigma M3 (1934) or
 ##	M4 (1942), both used by the German Navy supporting
-##	up to four rotors and the ring configuration.
+##	up to four rotors and the ring configuration + plugboard.
 ##
 
 from utils import ALPHABET, L2POS, POS2L
@@ -21,9 +21,14 @@ from utils import num2message
 class Enigma(object):
 	"""
 	This class handles encryption and decryption of messages, given a
-	specific setup for the machine. Messages can only contain letters that
-	are converted to upper case. Spaces, number, special characters, etc.
-	are not supported, thus discarded.
+	specific setup for the machine. Messages can contain any latin
+	ans special characters, although, during the encryption process,
+	special characters and spaces will be ignored and accents will
+	be removed.
+
+	Supports both M3 and M4 "Shark" versions of Enigma. The latter
+	only works with thin reflectors and the fourth rotor must be Beta
+	or Gamma.
 
 	ARGUMENTS:
 	  --> Plugboard: up to 10 groups mapping one letter into another (e.g.
@@ -58,12 +63,15 @@ class Enigma(object):
 
 		self.start_off = self.offsets.copy()
 
+		self.dble_turn = False
+
 	def __str__(self):
-		name = "Enigma M3\n\n"
-		rots = f"Rotors (left -> right): {', '.join(self.rotors_n)}\n"
-		refl = f"Reflector: {self.refl_name}\n"
-		offs = f"Initial Rotor Settings: {''.join([POS2L[i] for i in self.offsets])}\n"
-		ring = f"Ring Configuration: {''.join([POS2L[i] for i in self.rings])}\n"
+		mode = "M3" if self.n_rotors == 3 else "M4 Shark"
+		name = f"Enigma {mode}\n"
+		rots = f" - Rotors (left -> right): {', '.join(self.rotors_n)}\n"
+		refl = f" - Reflector: {self.refl_name}\n"
+		offs = f" - Initial Rotor Settings: {''.join([POS2L[i] for i in self.offsets])}\n"
+		ring = f" - Ring Configuration: {''.join([POS2L[i] for i in self.rings])}\n"
 		return name + rots + refl + offs + ring
 
 	def reset(self):
@@ -79,15 +87,26 @@ class Enigma(object):
 		25 and applies a substituition cypher.
 		"""
 		return [self.plugboard[l] for l in message_num]
-
+	
 	def _turn_rotors(self):
-		turn_next = True
-		for i in range(-1, -self.n_rotors - 1, -1):
-			if turn_next:
-				if POS2L[self.offsets[i]] not in TURNS[self.rotors_n[i]]:
-					self.offsets[i] = (self.offsets[i] + 1) % len(ALPHABET)
-					break
+		"""
+		Always turns the right (fast) rotor and accounts to multiple
+		rotations - when the letter shown by the second rotor from the right
+		is the notch letter.
+		"""
+		if self.dble_turn:
+			self.offsets[-2] = (self.offsets[-2] + 1) % len(ALPHABET)
+			self.offsets[-3] = (self.offsets[-3] + 1) % len(ALPHABET)
+			self.dble_turn = False
+
+		for i in range(-1, -4, -1):
+			if POS2L[self.offsets[i]] not in TURNS[self.rotors_n[i]]:
 				self.offsets[i] = (self.offsets[i] + 1) % len(ALPHABET)
+				if i == -2 and POS2L[self.offsets[i]] in TURNS[self.rotors_n[i]]:
+					self.dble_turn = True
+				break
+
+			self.offsets[i] = (self.offsets[i] + 1) % len(ALPHABET)
 
 	@staticmethod
 	def _rotor_right2left(rotor, input_letter, offset, ring):
@@ -181,11 +200,11 @@ class Enigma(object):
 
 
 if __name__ == "__main__":
-	enigma = Enigma("bq cr di ej kw mt os px uz gh", ["I", "II", "III"], "B", "AAA", "AAB")
+	enigma = Enigma("bq cr di ej kw mt os px uz gh", ["Gamma", "V", "II", "III"], "B_thin", "BBBC", "ACDA")
 
 	print(enigma)
 
-	txt = "The Enigma machine is a cipher device developed and used in the early- to mid-20th century to protect commercial, diplomatic, and military communication."
+	txt = "By 1930, the Reichswehr had suggested that the Navy adopt their machine, citing the benefits of increased security (with the plugboard) and easier interservice communications.[49] The Reichsmarine eventually agreed and in 1934[50] brought into service the Navy version of the Army Enigma, designated Funkschlüssel ' or M3. While the Army used only three rotors at that time, the Navy specified a choice of three from a possible five"
 
 	enc = enigma.encrypt(txt)
 
@@ -196,7 +215,7 @@ if __name__ == "__main__":
 	print(num2message(message2num(txt)), '\n')
 
 	print("Encrypted")
-	print_output(enc)
+	print_output(enc, 4, 6)
 
 	print()
 
