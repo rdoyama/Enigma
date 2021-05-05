@@ -74,8 +74,8 @@ class Enigma(object):
 		refl = f" - Reflector: {self.refl_name}\n"
 		offs = f" - Initial Rotor Settings: {''.join([POS2L[i] for i in self.offsets])}\n"
 		plug = [POS2L[h] + POS2L[k] for h, k in self.plugboard.items() if h != k]
-		plug = list(set(["".join(sorted(i)) for i in plug]))
-		plug = f" - Plugboard: {' '.join(plug)}\n"
+		plug = ' '.join(list(set(["".join(sorted(i)) for i in plug])))
+		plug = f" - Plugboard: {'None' if plug == '' else plug}\n"
 		ring = f" - Ring Configuration: {''.join([POS2L[i] for i in self.rings])}\n"
 		return name + rots + refl + offs + plug + ring
 
