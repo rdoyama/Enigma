@@ -1,10 +1,10 @@
 ## Enigma Machine
 
-This repository contains two main modules: `enigma.py` and `crack.py`, intended to encrypt/decrypt text and find the optimal machine configuration to decrypt a message, respectively. The latter module is still under development, so do not expect correct results. This implementation supports both Enigma M3 and M4 "Shark" variations.
+This repository contains two main modules: `enigma.py` and `crack.py`, intended to encrypt/decrypt text and find the optimal machine configuration to decrypt a message, respectively. The last module is still under development, so do not expect correct results. This implementation supports both Enigma M3 and M4 "Shark" variations.
 
 ### Usage and Documentation
 
-The code is pretty straighforward. As the second module is still incomplete, the following example only covers encryption/decryption of a simple message. If you want to understand the code and its arguments in detail, use the documentation provided by the Python `help` function and the source code.
+The code is pretty straightforward. As the second module is still incomplete, the following example only covers the encryption/decryption of a simple message. If you want to understand the code and its arguments in detail, use the documentation provided by the Python `help` function and the source code.
 
 ```python
 >> from enigma import Enigma
