@@ -51,7 +51,7 @@ class Enigma(object):
 	"""
 	def __init__(self, plugboard: str=None, rotors: list=["I", "II", "III"],
 						reflector: str="B", offsets: list="AAA",
-						rings: list="AAA"):
+						rings: list="AAA", *args, **kwargs):
 		check_enigma_inputs(rotors, reflector, offsets, rings)
 		self.plugboard = map_plugboard(plugboard)
 		self.rotors    = get_rotors(rotors)
@@ -78,6 +78,26 @@ class Enigma(object):
 		plug = f" - Plugboard: {'None' if plug == '' else plug}\n"
 		ring = f" - Ring Configuration: {''.join([POS2L[i] for i in self.rings])}\n"
 		return name + rots + refl + offs + plug + ring
+
+	def set(self, plugboard=None, rotors=None, reflector=None, offsets=None,
+						rings=None):
+		"""
+		Changes the Enigma Machine configuration. This method does not check
+		if the arguments are valid, so be careful.
+		"""
+		if plugboard is not None:
+			self.plugboard = map(plugboard)
+		if rotors is not None:
+			self.rotors    = get_rotors(rotors)
+			self.n_rotors  = len(rotors)
+			self.rotors_n  = [r.strip().upper() for r in rotors]
+		if reflector is not None:
+			self.reflector = get_reflector(reflector)
+			self.refl_name = reflector
+		if offsets is not None:
+			self.offsets   = [L2POS[letter] for letter in offsets]
+		if rings is not None:
+			self.rings     = [L2POS[letter] for letter in rings]
 
 	def reset(self):
 		"""
