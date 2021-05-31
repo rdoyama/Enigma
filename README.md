@@ -10,23 +10,22 @@ The code is pretty straighforward. As the second module is still incomplete, the
 >> from enigma import Enigma
 
 >> enigma = Enigma(plugboard="bq cr di ej kw mt os px uz gh",
-										   rotors=["Gamma", "V", "II", "III"],
-										   reflector="B_thin",
-										   offsets="GKDT",
-										   rings="HAAA")
-										   
+		   rotors=["Gamma", "V", "II", "III"],
+		   reflector="B_thin",
+		   offsets="GKDT",
+		   rings="HAAA")
 >> print(enigma)
-		Enigma M4 Shark
- 		   - Rotors (left -> right): GAMMA, V, II, III
-		    - Reflector: B_thin
- 		   - Initial Rotor Settings: GKDT
-		    - Plugboard: KW CR MT EJ DI GH UZ PX OS BQ
-		    - Ring Configuration: HAAA
+Enigma M4 Shark
+    - Rotors (left -> right): GAMMA, V, II, III
+    - Reflector: B_thin
+    - Initial Rotor Settings: GKDT
+    - Plugboard: KW CR MT EJ DI GH UZ PX OS BQ
+    - Ring Configuration: HAAA
 
 >> enigma.encrypt("This is a Python implementation for the Enigma Machine")
-		'OYMHWKTKUIAJCKNBKWQQSCGCPTZZVJGPGQJVBRSFPOYEEO'
+'OYMHWKTKUIAJCKNBKWQQSCGCPTZZVJGPGQJVBRSFPOYEEO'
 
 >> enigma.reset()
 >> enigma.decrypt("OYMHWKTKUIAJCKNBKWQQSCGCPTZZVJGPGQJVBRSFPOYEEO")
-		'THISISAPYTHONIMPLEMENTATIONFORTHEENIGMAMACHINE'
+'THISISAPYTHONIMPLEMENTATIONFORTHEENIGMAMACHINE'
 ```
