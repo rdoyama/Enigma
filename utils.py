@@ -183,3 +183,35 @@ def print_output(string, wlen=5, max_cols=5):
 			else:
 				print(string[s:e], end="  ")
 			nwords -= 1
+
+
+def sum_i(i):
+	"""
+	Returns the sum 1 + 2 + 3 + ... + i-1 + i
+	i must be a positive integer
+	"""
+	return 0 if i < 2 else sum(range(1, i))
+
+
+def process_text(text):
+	"""
+	Process text: remove accents, numbers, special characters,
+	spaces and capitalizes. Returns the processed string.
+	"""
+	to_ascii = unidecode(text.strip().upper())
+	return "".join(filter(lambda x: x.isalpha(), to_ascii))
+
+
+def IoC(text):
+	"""
+	Returns the Index of Coincidence of the string "text".
+	"text" must contain only capital letters - no spaces,
+	number, special characters or accents.
+
+	If the input text is not processed, use process_text
+	first.
+	"""
+	letter_count = {l:0 for l in ALPHABET}
+	for l in text:
+		letter_count[l] += 1
+	return sum(sum_i(c) for c in letter_count.values()) / sum_i(len(text))
